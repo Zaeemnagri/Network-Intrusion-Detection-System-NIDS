@@ -138,9 +138,3 @@ sniffer = PacketSniffer(
 | `GET /api/chart/...` | Historical traffic/attack endpoints used for dashboard rendering |
 
 ---
-
-## 🤝 Contributing
-Contributions, issues and feature requests are welcome. Feel free to check the issues page if you want to contribute.
-
-## 📝 License
-This project is open-source and available under the terms of the MIT License.
