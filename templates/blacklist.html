@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}NIDS — Blacklist{% endblock %}
+{% block page_title %}IP Blacklist{% endblock %}
+{% block page_subtitle %}Manage blocked IP addresses{% endblock %}
+
+{% block content %}
+
+<div class="blacklist-layout">
+
+    <!-- Add IP Form -->
+    <div class="panel add-panel">
+        <div class="panel-header"><h3>Block an IP Address</h3></div>
+        <form method="POST" action="/blacklist/add" class="add-form">
+            <div class="form-group">
+                <label class="form-label">IP Address</label>
+                <input type="text" name="ip_address" class="form-input"
+                       placeholder="e.g. 203.0.113.45" required pattern="[\d\.\:a-fA-F]+" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Reason</label>
+                <input type="text" name="reason" class="form-input"
+                       placeholder="e.g. Repeated port scans" value="Manual block" />
+            </div>
+            <button type="submit" class="btn btn-danger">⛔ Block IP</button>
+        </form>
+
+        <!-- Quick block from top attackers -->
+        {% if top_attackers %}
+        <div class="quick-block">
+            <h4>Quick Block (Top Attackers)</h4>
+            {% for attacker in top_attackers[:5] %}
+            <form method="POST" action="/blacklist/add" class="quick-form">
+                <input type="hidden" name="ip_address" value="{{ attacker.source_ip }}">
+                <input type="hidden" name="reason" value="Quick block: {{ attacker.alert_count }} alerts">
+                <div class="quick-row">
+                    <span class="quick-ip">{{ attacker.source_ip }}</span>
+                    <span class="quick-count">{{ attacker.alert_count }} alerts</span>
+                    <button type="submit" class="btn btn-sm btn-danger">Block</button>
+                </div>
+            </form>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Blacklist Table -->
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Blocked IPs <span class="count-badge">{{ blacklist|length }}</span></h3>
+        </div>
+        {% if blacklist %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>Reason</th>
+                    <th>Added</th>
+                    <th>Type</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in blacklist %}
+                <tr class="table-row">
+                    <td class="mono ip-cell">{{ entry.ip_address }}</td>
+                    <td>{{ entry.reason or '—' }}</td>
+                    <td class="mono timestamp">{{ entry.added_at }}</td>
+                    <td>
+                        <span class="type-badge {% if entry.auto_added %}type-auto{% else %}type-manual{% endif %}">
+                            {% if entry.auto_added %}AUTO{% else %}MANUAL{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <form method="POST" action="/blacklist/remove" style="display:inline">
+                            <input type="hidden" name="ip_address" value="{{ entry.ip_address }}">
+                            <button type="submit" class="btn btn-sm btn-ghost"
+                                    onclick="return confirm('Unblock {{ entry.ip_address }}?')">
+                                ✕ Unblock
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-panel">No IPs are currently blacklisted.</div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

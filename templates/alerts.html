@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}NIDS — Alerts{% endblock %}
+{% block page_title %}Security Alerts{% endblock %}
+{% block page_subtitle %}{{ total_count }} total alerts detected{% endblock %}
+
+{% block content %}
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="/alerts" class="filter-form">
+        <label class="filter-label">Filter by Severity:</label>
+        <select name="severity" class="filter-select" onchange="this.form.submit()">
+            <option value="">All Severities</option>
+            <option value="CRITICAL" {% if severity == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
+            <option value="HIGH"     {% if severity == 'HIGH'     %}selected{% endif %}>HIGH</option>
+            <option value="MEDIUM"   {% if severity == 'MEDIUM'   %}selected{% endif %}>MEDIUM</option>
+            <option value="LOW"      {% if severity == 'LOW'      %}selected{% endif %}>LOW</option>
+        </select>
+        {% if severity %}
+        <a href="/alerts" class="filter-clear">✕ Clear filter</a>
+        {% endif %}
+    </form>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span class="filter-count">Showing {{ alerts|length }} of {{ total_count }} alerts</span>
+        <a href="/api/export/csv" class="page-btn" style="background:#0a84ff; color:#fff; border:none; padding:6px 12px; border-radius:4px; text-decoration:none; font-size: 0.85rem; font-weight: 500;">📥 Export CSV</a>
+    </div>
+</div>
+
+<!-- Alerts Table -->
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Timestamp</th>
+                <th>Source IP</th>
+                <th>Dest IP</th>
+                <th>Attack Type</th>
+                <th>Severity</th>
+                <th>Packets</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in alerts %}
+            <tr class="table-row sev-row-{{ alert.severity|lower }}">
+                <td class="mono">{{ alert.id }}</td>
+                <td class="mono timestamp">{{ alert.timestamp }}</td>
+                <td class="mono ip-cell">{{ alert.source_ip }}</td>
+                <td class="mono ip-cell">{{ alert.dest_ip or '—' }}</td>
+                <td>
+                    <span class="type-badge type-{{ alert.alert_type|lower|replace('_','-') }}">
+                        {{ alert.alert_type }}
+                    </span>
+                </td>
+                <td>
+                    <span class="sev-badge sev-{{ alert.severity|lower }}">
+                        {{ alert.severity }}
+                    </span>
+                </td>
+                <td class="mono">{{ alert.packet_count or 1 }}</td>
+                <td class="desc-cell">{{ alert.description or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="empty-row">No alerts found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+    <a href="/alerts?page={{ page-1 }}{% if severity %}&severity={{ severity }}{% endif %}" class="page-btn">← Prev</a>
+    {% endif %}
+
+    {% for p in range([1, page-2]|max, [total_pages+1, page+3]|min) %}
+    <a href="/alerts?page={{ p }}{% if severity %}&severity={{ severity }}{% endif %}"
+       class="page-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+    {% endfor %}
+
+    {% if page < total_pages %}
+    <a href="/alerts?page={{ page+1 }}{% if severity %}&severity={{ severity }}{% endif %}" class="page-btn">Next →</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Auto-refresh the page every 15 seconds to show new alerts
+const socket = io();
+socket.on('new_alert', () => {
+    setTimeout(() => location.reload(), 500);
+});
+</script>
+{% endblock %}

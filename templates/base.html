@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NIDS Dashboard{% endblock %}</title>
+
+    <!-- Google Fonts: JetBrains Mono for that terminal feel + Inter for UI -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Socket.IO for real-time updates -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.2/client-dist/socket.io.min.js"></script>
+
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <!-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="20" cy="20" r="18" stroke="var(--accent)" stroke-width="2"/>
+                    <path d="M20 8 L20 20 L28 26" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="20" cy="20" r="3" fill="var(--accent)"/>
+                    <path d="M12 12 Q8 20 12 28" stroke="var(--accent-dim)" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M28 12 Q32 20 28 28" stroke="var(--accent-dim)" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="logo-text">
+                <span class="logo-title">NIDS</span>
+                <span class="logo-sub">Intrusion Detection</span>
+            </div>
+        </div>
+
+        <div class="sidebar-status">
+            <div class="status-indicator" id="sniffer-status-dot"></div>
+            <span id="sniffer-status-text">Connecting...</span>
+        </div>
+        
+        <div class="sidebar-status ml-status-container" style="margin-top: -15px; margin-bottom: 20px;">
+            <div class="status-indicator" id="ml-status-dot" style="background:#ff7f00;"></div>
+            <span id="ml-status-text" style="color:var(--text-dim); font-size:0.85rem;">🧠 AI: Checking...</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                </svg>
+                Dashboard
+            </a>
+            <a href="/alerts" class="nav-item {% if active_page == 'alerts' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Alerts
+                <span class="nav-badge" id="alert-badge">0</span>
+            </a>
+            <a href="/traffic" class="nav-item {% if active_page == 'traffic' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                Traffic Logs
+            </a>
+            <a href="/blacklist" class="nav-item {% if active_page == 'blacklist' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+                Blacklist
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="nav-item" style="color:#ff2d55; border:1px solid #ff2d55; margin-bottom:15px; background:rgba(255,45,85,0.1); justify-content:center; cursor:pointer; width:100%; border-radius:8px;" onclick="resetData()">
+                💣 Reset Data
+            </button>
+            <div class="packet-counter">
+                <span class="counter-label">Packets Captured</span>
+                <span class="counter-value" id="packet-count">0</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════════ MAIN CONTENT ═══════════════════════════════ -->
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <span class="page-subtitle">{% block page_subtitle %}Real-time network monitoring{% endblock %}</span>
+            </div>
+            <div class="top-bar-right">
+                <div class="live-badge">
+                    <span class="pulse-dot"></span>
+                    LIVE
+                </div>
+                <div class="current-time" id="current-time">--:--:--</div>
+            </div>
+        </header>
+
+        <div class="content-area">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════ TOAST NOTIFICATIONS ═══════════════════════════════ -->
+    <div id="toast-container"></div>
+
+    <script src="/static/js/main.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

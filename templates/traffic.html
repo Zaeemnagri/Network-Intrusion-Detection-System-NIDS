@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}NIDS — Traffic Logs{% endblock %}
+{% block page_title %}Traffic Logs{% endblock %}
+{% block page_subtitle %}Raw packet metadata — last 200 samples{% endblock %}
+
+{% block content %}
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Source IP</th>
+                <th>Src Port</th>
+                <th>Dest IP</th>
+                <th>Dst Port</th>
+                <th>Protocol</th>
+                <th>Flags</th>
+                <th>Size (B)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr class="table-row proto-{{ log.protocol|lower }}">
+                <td class="mono timestamp">{{ log.timestamp }}</td>
+                <td class="mono ip-cell">{{ log.source_ip or '—' }}</td>
+                <td class="mono">{{ log.source_port or '—' }}</td>
+                <td class="mono ip-cell">{{ log.dest_ip or '—' }}</td>
+                <td class="mono">{{ log.dest_port or '—' }}</td>
+                <td>
+                    <span class="proto-badge proto-{{ log.protocol|lower }}">
+                        {{ log.protocol or '?' }}
+                    </span>
+                </td>
+                <td class="mono flags">{{ log.flags or '—' }}</td>
+                <td class="mono">{{ log.size or 0 }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="empty-row">No traffic logs yet. Start the sniffer to capture packets.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

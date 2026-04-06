@@ -1,0 +1,6 @@
+scapy==2.5.0
+flask==3.0.0
+flask-socketio==5.3.6
+pandas
+scikit-learn
+eventlet==0.35.1

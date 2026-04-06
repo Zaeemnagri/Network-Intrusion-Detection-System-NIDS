@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% block title %}NIDS — Dashboard{% endblock %}
+{% block page_title %}Overview{% endblock %}
+{% block page_subtitle %}Live threat monitoring & network statistics{% endblock %}
+
+{% block content %}
+
+<!-- ── STAT CARDS ── -->
+<section class="stats-grid">
+    <div class="stat-card critical">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Total Alerts</span>
+            <span class="stat-value" id="stat-total-alerts">{{ stats.total_alerts or 0 }}</span>
+        </div>
+        <div class="stat-delta" id="stat-24h">{{ stats.alerts_24h or 0 }} today</div>
+    </div>
+
+    <div class="stat-card high">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Critical Alerts</span>
+            <span class="stat-value" id="stat-critical">{{ stats.critical_alerts or 0 }}</span>
+        </div>
+        <div class="stat-delta">Severity: CRITICAL</div>
+    </div>
+
+    <div class="stat-card medium">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Unique Attackers</span>
+            <span class="stat-value" id="stat-attackers">{{ stats.unique_attackers or 0 }}</span>
+        </div>
+        <div class="stat-delta">Distinct source IPs</div>
+    </div>
+
+    <div class="stat-card info">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Blacklisted IPs</span>
+            <span class="stat-value" id="stat-blacklisted">{{ stats.blacklisted_ips or 0 }}</span>
+        </div>
+        <div class="stat-delta">Auto + manual blocks</div>
+    </div>
+
+    <div class="stat-card blue">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Packets Analyzed</span>
+            <span class="stat-value" id="stat-packets">{{ stats.total_packets or 0 }}</span>
+        </div>
+        <div class="stat-delta">Sampled traffic logs</div>
+    </div>
+
+    <div class="stat-card green">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">System Status</span>
+            <span class="stat-value" style="font-size:1.2rem" id="stat-status">
+                {% if is_running %}ACTIVE{% else %}STOPPED{% endif %}
+            </span>
+        </div>
+        <div class="stat-delta" id="stat-uptime">Monitoring active</div>
+    </div>
+</section>
+
+
+<!-- ── CHARTS ROW ── -->
+<section class="charts-grid">
+    <div class="chart-card wide">
+        <div class="chart-header">
+            <h3>Alerts Over Time <span class="chart-sub">(last 60 min)</span></h3>
+            <button class="chart-refresh" onclick="loadCharts()">↻ Refresh</button>
+        </div>
+        <div class="chart-body">
+            <canvas id="chart-timeline"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-header">
+            <h3>Attack Types</h3>
+        </div>
+        <div class="chart-body">
+            <canvas id="chart-types"></canvas>
+        </div>
+    </div>
+</section>
+
+
+<!-- ── BOTTOM ROW: Recent Alerts + Top Attackers ── -->
+<section class="bottom-grid">
+
+    <!-- Recent Alerts (live) -->
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Recent Alerts</h3>
+            <a href="/alerts" class="panel-link">View all →</a>
+        </div>
+        <div class="alert-feed" id="alert-feed">
+            <div class="feed-empty">Waiting for alerts...</div>
+        </div>
+    </div>
+
+    <!-- Top Attackers -->
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Top Suspicious IPs</h3>
+            <button class="panel-link" onclick="loadTopAttackers()">↻</button>
+        </div>
+        <div id="top-attackers-list">
+            <div class="feed-empty">Loading...</div>
+        </div>
+    </div>
+
+</section>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+// ── Chart instances ──
+let timelineChart = null;
+let typesChart    = null;
+
+// ── Color palette ──
+const COLORS = {
+    CRITICAL: '#ff4757',
+    HIGH:     '#ff7f00',
+    MEDIUM:   '#ffd700',
+    LOW:      '#2ed573',
+    PORT_SCAN:'#ff6b81',
+    SYN_FLOOD:'#ff4757',
+    ICMP_FLOOD:'#ff7f00',
+    UDP_FLOOD: '#ffa502',
+    BLACKLISTED_IP: '#ff2f2f',
+};
+
+// ── Load all charts ──
+async function loadCharts() {
+    await loadTimelineChart();
+    await loadTypesChart();
+    await loadTopAttackers();
+}
+
+// Alerts-over-time line chart
+async function loadTimelineChart() {
+    const data = await fetch('/api/chart/alerts-over-time').then(r => r.json());
+    const labels = data.map(d => d.minute.slice(11, 16));  // "HH:MM"
+    const counts = data.map(d => d.count);
+
+    const ctx = document.getElementById('chart-timeline').getContext('2d');
+    if (timelineChart) timelineChart.destroy();
+
+    timelineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Alerts',
+                data:  counts,
+                borderColor:     '#ff4757',
+                backgroundColor: 'rgba(255,71,87,0.12)',
+                borderWidth:     2,
+                pointRadius:     3,
+                pointBackgroundColor: '#ff4757',
+                tension:         0.4,
+                fill:            true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    ticks: { color: '#8892a4', font: { family: 'JetBrains Mono', size: 10 } },
+                    grid:  { color: 'rgba(255,255,255,0.05)' },
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#8892a4', font: { family: 'JetBrains Mono', size: 10 }, stepSize: 1 },
+                    grid:  { color: 'rgba(255,255,255,0.05)' },
+                },
+            },
+        },
+    });
+}
+
+// Alert types doughnut chart
+async function loadTypesChart() {
+    const data = await fetch('/api/chart/alert-types').then(r => r.json());
+    if (!data.length) return;
+
+    const ctx = document.getElementById('chart-types').getContext('2d');
+    if (typesChart) typesChart.destroy();
+
+    const typeColors = data.map(d => COLORS[d.alert_type] || '#8892a4');
+
+    typesChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels:   data.map(d => d.alert_type),
+            datasets: [{
+                data:            data.map(d => d.count),
+                backgroundColor: typeColors,
+                borderColor:     '#0d1117',
+                borderWidth:     3,
+                hoverOffset:     6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#8892a4',
+                        font: { family: 'JetBrains Mono', size: 10 },
+                        boxWidth: 12,
+                        padding: 16,
+                    }
+                }
+            },
+            cutout: '65%',
+        },
+    });
+}
+
+// Top attackers table
+async function loadTopAttackers() {
+    const data = await fetch('/api/chart/top-attackers').then(r => r.json());
+    const container = document.getElementById('top-attackers-list');
+    if (!data.length) {
+        container.innerHTML = '<div class="feed-empty">No suspicious IPs yet</div>';
+        return;
+    }
+    container.innerHTML = data.map((item, i) => `
+        <div class="attacker-row">
+            <span class="attacker-rank">#${i+1}</span>
+            <span class="attacker-ip">${item.source_ip}</span>
+            <span class="attacker-count">${item.alert_count} alerts</span>
+            <span class="attacker-type">${(item.attack_types || '').split(',')[0]}</span>
+        </div>
+    `).join('');
+}
+
+// Load recent alerts into the feed
+async function loadRecentAlerts() {
+    const data = await fetch('/api/alerts?limit=10').then(r => r.json());
+    updateAlertFeed(data.reverse());  // Show oldest first in feed
+}
+
+// Add alert cards to the feed
+function updateAlertFeed(alerts) {
+    const feed = document.getElementById('alert-feed');
+    if (!alerts.length) {
+        feed.innerHTML = '<div class="feed-empty">No alerts yet...</div>';
+        return;
+    }
+    // Prepend new alerts at top
+    alerts.forEach(alert => {
+        const existing = document.getElementById(`alert-${alert.id}`);
+        if (existing) return;  // Don't duplicate
+        const card = buildAlertCard(alert);
+        if (feed.querySelector('.feed-empty')) feed.innerHTML = '';
+        feed.insertAdjacentHTML('afterbegin', card);
+    });
+    // Keep only latest 10
+    const cards = feed.querySelectorAll('.alert-card');
+    if (cards.length > 10) {
+        for (let i = 10; i < cards.length; i++) cards[i].remove();
+    }
+}
+
+function buildAlertCard(alert) {
+    const sev = alert.severity || 'MEDIUM';
+    return `
+        <div class="alert-card sev-${sev.toLowerCase()}" id="alert-${alert.id || Date.now()}">
+            <div class="alert-card-top">
+                <span class="alert-type-badge">${alert.alert_type}</span>
+                <span class="alert-sev sev-${sev.toLowerCase()}">${sev}</span>
+                <span class="alert-time">${(alert.timestamp||'').slice(11,19)}</span>
+            </div>
+            <div class="alert-card-ip">
+                <span class="alert-ip">${alert.source_ip}</span>
+                ${alert.dest_ip && alert.dest_ip !== 'N/A' ? `<span class="arrow">→</span><span class="alert-ip dest">${alert.dest_ip}</span>` : ''}
+            </div>
+            <div class="alert-desc">${alert.description || ''}</div>
+        </div>
+    `;
+}
+
+// Update stat cards via AJAX
+async function updateStats() {
+    const stats = await fetch('/api/stats').then(r => r.json());
+    document.getElementById('stat-total-alerts').textContent  = stats.total_alerts  || 0;
+    document.getElementById('stat-critical').textContent      = stats.critical_alerts|| 0;
+    document.getElementById('stat-attackers').textContent     = stats.unique_attackers||0;
+    document.getElementById('stat-blacklisted').textContent   = stats.blacklisted_ips||0;
+    document.getElementById('stat-packets').textContent       = (stats.packet_count||0).toLocaleString();
+    document.getElementById('stat-24h').textContent           = `${stats.alerts_24h||0} today`;
+    document.getElementById('alert-badge').textContent        = stats.total_alerts||0;
+    document.getElementById('packet-count').textContent       = (stats.packet_count||0).toLocaleString();
+}
+
+// ── SocketIO: real-time alert push ──
+const socket = io();
+socket.on('connect',    () => updateSnifferStatus(true));
+socket.on('disconnect', () => updateSnifferStatus(false));
+
+socket.on('new_alert', (alert) => {
+    showToast(alert);
+    updateAlertFeed([alert]);
+    updateStats();
+});
+
+function updateSnifferStatus(connected) {
+    const dot  = document.getElementById('sniffer-status-dot');
+    const text = document.getElementById('sniffer-status-text');
+    if (connected) {
+        dot.classList.add('online');
+        text.textContent = 'System Online';
+    } else {
+        dot.classList.remove('online');
+        text.textContent = 'Disconnected';
+    }
+}
+
+// ── Initialize ──
+document.addEventListener('DOMContentLoaded', () => {
+    loadCharts();
+    loadRecentAlerts();
+    updateStats();
+
+    // Refresh charts every 30 seconds
+    setInterval(loadCharts, 30_000);
+    // Refresh stats every 5 seconds
+    setInterval(updateStats, 5_000);
+    // Refresh recent alerts every 10 seconds
+    setInterval(loadRecentAlerts, 10_000);
+});
+</script>
+{% endblock %}
