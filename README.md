@@ -6,7 +6,12 @@
   **A production-quality, real-time Network Intrusion Detection System powered by Machine Learning, Packet Sniffing, and a Live Web Dashboard.**
 </div>
 
----
+ ## 📸 Project Preview
+
+<p align="center">
+  <img src="static/NIDS-Dashboard.png" alt="NIDS Dashboard" width="900">
+</p>
+
 
 ## 📸 Features
 
